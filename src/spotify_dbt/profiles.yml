@@ -1,0 +1,12 @@
+spotify_dbt:
+  target: dev
+  outputs:
+    dev:
+      host: localhost
+      dbname: "{{ env_var('SPOTIFY_DB_NAME') }}"
+      user: "{{ env_var('SPOTIFY_DB_USER') }}"
+      password: "{{ env_var('SPOTIFY_DB_PASSWORD') }}"
+      port: "{{ env_var('SPOTIFY_DB_PORT') | int }}"
+      schema: public
+      threads: 4
+      type: postgres
