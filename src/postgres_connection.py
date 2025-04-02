@@ -7,7 +7,7 @@ class PostgresConnect:
     def __init__(self):
         self.host = os.getenv('POSTGRES_HOST')
         self.port = os.getenv('POSTGRES_PORT')
-        self.dbname = os.getenv('POSTGRES_DBNAME')
+        self.dbname = os.getenv('POSTGRES_DB')
         self.pg_user = os.getenv('POSTGRES_USER')
         self.pg_password = os.getenv('POSTGRES_PASSWORD')
 

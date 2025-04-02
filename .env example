@@ -4,10 +4,11 @@ SPOTIFY_CLIENT_SECRET=your_spotify_client_secret
 SPOTIFY_REDIRECT_URI=http://localhost:8080/callback
 SPOTIFY_SCOPE=user-read-private,user-read-email,user-library-read,user-top-read # for this particular project
 
-# PostgreSQL (Airflow metadata) configuration
-POSTGRES_USER=airflow
+# PostgreSQL DB configuration
+POSTGRES_HOST=your_host
+POSTGRES_USER=your_postgres_user
 POSTGRES_PASSWORD=your_secure_postgres_password
-POSTGRES_DB=airflow
+POSTGRES_DB=your_postgres_db
 POSTGRES_PORT=5432
 
 # Redis configuration
@@ -26,10 +27,3 @@ GRAFANA_PORT=3000
 GRAFANA_ADMIN_USER=admin
 GRAFANA_ADMIN_PASSWORD=your_secure_grafana_password
 GRAFANA_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource
-
-# Spotify database configuration
-SPOTIFY_DB_USER=spotify
-SPOTIFY_DB_PASSWORD=your_secure_spotify_db_password
-SPOTIFY_DB_NAME=spotify_data
-SPOTIFY_DB_PORT=5433
-

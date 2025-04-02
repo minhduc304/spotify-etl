@@ -3,10 +3,10 @@ spotify_dbt:
   outputs:
     dev:
       host: localhost
-      dbname: "{{ env_var('SPOTIFY_DB_NAME') }}"
-      user: "{{ env_var('SPOTIFY_DB_USER') }}"
-      password: "{{ env_var('SPOTIFY_DB_PASSWORD') }}"
-      port: "{{ env_var('SPOTIFY_DB_PORT') | int }}"
+      dbname: "{{ env_var('POSTGRES_DB') }}"
+      user: "{{ env_var('POSTGRES_USER') }}"
+      password: "{{ env_var('POSTGRES_PASSWORD') }}"
+      port: "{{ env_var('POSTGRES_PORT') | int }}"
       schema: public
       threads: 4
       type: postgres

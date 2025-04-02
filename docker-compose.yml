@@ -2,7 +2,7 @@ services:
   # PostgreSQL database for storing Airflow metadata
   postgres:
     image: postgres:15
-    container_name: spotify_postgres
+    container_name: postgres
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
@@ -150,25 +150,7 @@ services:
       - ./grafana/dashboards:/var/lib/grafana/dashboards
     restart: always
 
-  # Add a separate Postgres database for Spotify data
-  spotify-db:
-    image: postgres:15
-    container_name: spotify_data_db
-    environment:
-      - POSTGRES_USER=${SPOTIFY_DB_USER}
-      - POSTGRES_PASSWORD=${SPOTIFY_DB_PASSWORD}
-      - POSTGRES_DB=${SPOTIFY_DB_NAME}
-    ports:
-      - "${SPOTIFY_DB_PORT}:5432"
-    volumes:
-      - spotify_db_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD", "pg_isready", "-U", "${SPOTIFY_DB_USER}"]
-      interval: 5s
-      retries: 5
-    restart: always
 
 volumes:
   postgres_data:
   grafana_data:
-  spotify_db_data:
