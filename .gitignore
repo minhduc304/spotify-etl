@@ -175,3 +175,6 @@ cython_debug/
 
 # DBT
 .user.yml
+
+# test files
+test.py

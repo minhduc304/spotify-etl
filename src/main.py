@@ -7,7 +7,7 @@ from datetime import datetime
 import pandas as pd
 from postgres_connection import PostgresConnect
 
-load_dotenv()
+# load_dotenv('/Users/ducvu/Projects/spotify-etl-/.env')
 
 
 class SpotifyConnect:
@@ -26,22 +26,61 @@ class SpotifyConnect:
                                                        scope=self.scope))
         return sp
     
+    def _get_default_timestamp(self):
+        """
+        Returns a default timestamp from 30 days ago in Unix milliseconds.
+        """
+        today = datetime.now()
+        previous_date = today - pd.DateOffset(days=30)
+        return int(previous_date.timestamp()) * 1000
+
     def get_recent_listen_timestamp(self):
+        """
+        Retrieves the most recent timestamp from the recently_played table.
+        Creates the table if it doesn't exist.
+        """
         conn = PostgresConnect().connector()
         cur = conn.cursor()
 
-        query = "SELECT MAX(played_at) FROM recently_played"
+        #First, check if the table exists
+        check_table_query = """
+        SELECT EXISTS (
+            SELECT FROM information_schema.tables 
+            WHERE table_name = 'recently_played'
+        );
+        """
+        cur.execute(check_table_query)
+        table_exists = cur.fetchone()[0]
 
+        if not table_exists:
+            create_table_query = """    
+            CREATE TABLE recently_played (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(255),
+                artist_id VARCHAR(255),
+                artist VARCHAR(255),
+                album VARCHAR(255),
+                genre VARCHAR(255),
+                played_at TIMESTAMP
+            );
+            """
+            cur.execute(create_table_query)
+            conn.commit()
+
+            #Return a default timestamp (30 days ago) since there's no data
+            return self._get_default_timestamp()
+
+        #If the table exists, get the latest timestamp
+        query = "SELECT MAX(played_at) FROM recently_played"
         cur.execute(query)
         result = cur.fetchone()
 
-        if result is None:
-            today = datetime.now()
-            previous_date = today - pd.DateOffset(days=30)
-            previous_date_unix_timestamp = int(previous_date.timestamp()) * 1000
-            latest_timestamp = previous_date_unix_timestamp
+        if result[0] is None:
+        # No records in the table yet
+            latest_timestamp = self._get_default_timestamp()
         else:
-            latest_timestamp = int(max(result.timestamp)) * 1000
+            # Convert the timestamp to Unix timestamp in milliseconds
+            latest_timestamp = int(result[0].timestamp()) * 1000
         
         return latest_timestamp
     
@@ -59,7 +98,7 @@ class SpotifyConnect:
                 'artist_id': ', '.join([artist['id'] for artist in track['artists']]),
                 'artist': ', '.join([artist['name'] for artist in track['artists']]),
                 'album': track['album']['name'],
-                'genre': ', '.join([genre for genre in track['album']['genres']]),
+                'genre': ', '.join([genre for genre in track['album']['genre']]),
                 'played_at': item['played_at']
             }
             tracks.append(track_info)
