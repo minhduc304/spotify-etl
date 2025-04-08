@@ -55,13 +55,14 @@ class SpotifyConnect:
         if not table_exists:
             create_table_query = """    
             CREATE TABLE recently_played (
-                id SERIAL PRIMARY KEY,
+                track_id VARCHAR(255),
                 name VARCHAR(255),
                 artist_id VARCHAR(255),
                 artist VARCHAR(255),
                 album VARCHAR(255),
                 genre VARCHAR(255),
                 played_at TIMESTAMP
+                primary key (played_at)
             );
             """
             cur.execute(create_table_query)
@@ -95,10 +96,11 @@ class SpotifyConnect:
             track = item['track']
             track_info = {
                 'name': track['name'],
+                'track id': track['id'],
                 'artist_id': ', '.join([artist['id'] for artist in track['artists']]),
                 'artist': ', '.join([artist['name'] for artist in track['artists']]),
                 'album': track['album']['name'],
-                'genre': ', '.join([genre for genre in track['album']['genre']]),
+                'genres': sp.artist(track['artists'][0]['id'])['genres'],
                 'played_at': item['played_at']
             }
             tracks.append(track_info)
@@ -112,7 +114,7 @@ class SpotifyConnect:
         file_path = 'recently_played.csv'
         file_exists = os.path.isfile(file_path)
         with open(file_path, mode='a', newline='', encoding='utf-8') as csvfile:
-            fieldnames = ['name', 'artist', 'album', 'played_at']
+            fieldnames = ['name', 'track_id', 'artist', 'artist_id', 'album', 'genres', 'played_at']
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 
             # Write header only if the file does not exist
