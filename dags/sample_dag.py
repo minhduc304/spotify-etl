@@ -18,15 +18,20 @@ dag = DAG(
     catchup=False,
 )
 
-test_postgres_task = PostgresOperator(
-    task_id='test_postgres_connection',
+get_recently_played_task = PostgresOperator(
+    task_id='get_recently_played',
     postgres_conn_id='postgres',
     sql="""
-        SELECT 1;
+        SELECT EXISTS (
+            SELECT FROM information_schema.tables 
+            WHERE table_name = 'recently_played'
+        );
     """,
     autocommit=True,
     dag=dag,
 )
 
 
-test_postgres_task
+
+
+get_recently_played_task

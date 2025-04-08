@@ -2,7 +2,7 @@
 SPOTIFY_CLIENT_ID=your_spotify_client_id
 SPOTIFY_CLIENT_SECRET=your_spotify_client_secret
 SPOTIFY_REDIRECT_URI=http://localhost:8080/callback
-SPOTIFY_SCOPE=user-read-private,user-read-email,user-library-read,user-top-read # for this particular project
+SPOTIFY_SCOPE=user-read-playback-state,user-read-currently-playing,user-read-recently-played,user-top-read,user-read-playback-position # for this particular project
 
 # PostgreSQL DB configuration
 POSTGRES_HOST=your_host
@@ -27,3 +27,6 @@ GRAFANA_PORT=3000
 GRAFANA_ADMIN_USER=admin
 GRAFANA_ADMIN_PASSWORD=your_secure_grafana_password
 GRAFANA_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource
+
+# Directories
+recently_played_csv=/your_path/recently_played.csv
