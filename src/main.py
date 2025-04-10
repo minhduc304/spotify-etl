@@ -61,7 +61,7 @@ class SpotifyConnect:
                 artist VARCHAR(255),
                 album VARCHAR(255),
                 genre VARCHAR(255),
-                played_at TIMESTAMP
+                played_at TIMESTAMP,
                 primary key (played_at)
             );
             """
@@ -96,7 +96,7 @@ class SpotifyConnect:
             track = item['track']
             track_info = {
                 'name': track['name'],
-                'track id': track['id'],
+                'track_id': track['id'],
                 'artist_id': ', '.join([artist['id'] for artist in track['artists']]),
                 'artist': ', '.join([artist['name'] for artist in track['artists']]),
                 'album': track['album']['name'],

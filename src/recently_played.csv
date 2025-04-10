@@ -1,4 +1,6 @@
-name,artist,album,played_at
+name,track_id,artist,artist_id,album,genres,played_at
+Reflections,5Zf25eS8E1znm9mez4cGsm,Toshifumi Hinata,08tfDO4dSrwxax35a3HIMC,ひとつぶの海,['japanese classical'],2025-04-08T03:25:43.685Z
+EVERYTHING,19Hg1UCZaCdpHB37L7x63X,The Black Skirts,6WeDO4GynFmK4OxwkBzMW8,TEAM BABY,['k-rock'],2025-04-08T03:04:13.968Z
 When My Life Is Over,1FEReJVLy8W0P4GOT7NHLc,Banes World,5BCnLrqpwYtufR1bDWn0hG,When My Life Is Over,['bedroom pop'],2025-04-08T02:59:20.348Z
 (Only) About Love - Demo,0T3pyPYtHAsxIRymAZsTkX,grentperez,73BLwSX6gsNeVzS7DgI4xe,Demo(s) About Love,[],2025-04-08T02:56:59.155Z
 Lily of The Valley,4gAIUEY7VkeiKQOPwIYaYb,DANIEL,1eZ0sjIrNuSNiZSfjTYgi6,Flower,[],2025-04-08T02:52:40.643Z
