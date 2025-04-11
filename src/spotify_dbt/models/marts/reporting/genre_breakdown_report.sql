@@ -8,3 +8,11 @@ This model:
 - Correlates genres with listening contexts (time of day, etc)
 - Measures genre exploration vs. genre loyalty
 */
+
+{{
+    config(
+        materialized='table',
+        schema='reporting',
+        tags=['report', 'weekly']
+    )
+}}

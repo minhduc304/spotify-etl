@@ -8,3 +8,11 @@ This model:
 - Handles various album types (album, single, compilation)
 - Preserves market availability information
 */
+
+{{ 
+    config(
+        materialized='view',
+        schema='staging',
+        tags=['daily_refresh']
+    ) 
+}}

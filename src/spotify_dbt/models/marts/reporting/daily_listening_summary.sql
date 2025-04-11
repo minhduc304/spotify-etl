@@ -8,3 +8,11 @@ This model:
 - Compares weekday vs weekend listening patterns
 - Provides trend indicators (up/down vs previous day/week)
 */
+
+{{
+    config(
+        materialized='table',
+        schema='reporting',
+        tags=['report', 'daily']
+    )
+}}

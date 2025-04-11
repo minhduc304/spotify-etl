@@ -8,3 +8,12 @@ This model:
 - Analyzes artist diversity within playlists
 - Compares user playlists to Spotify's editorial playlists
 */
+
+
+{{
+    config(
+        materialized='table',
+        schema='reporting',
+        tags=['report', 'weekly']
+    )
+}}

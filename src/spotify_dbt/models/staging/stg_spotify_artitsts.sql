@@ -8,3 +8,11 @@ This model:
 - Creates a consistent view of artist metadata
 - Incorporates artist type and market availability
 */
+
+{{ 
+    config(
+        materialized='view',
+        schema='staging',
+        tags=['daily_refresh']
+    ) 
+}}

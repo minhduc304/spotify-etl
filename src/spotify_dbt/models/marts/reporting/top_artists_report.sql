@@ -8,3 +8,12 @@ This model:
 - Shows diversity of genre across top artists
 - Provides time-based artist ranking changes
 */
+
+{{
+    config(
+        materialized='table',
+        schema='reporting',
+        tags=['report', 'daily']
+    )
+}}
+

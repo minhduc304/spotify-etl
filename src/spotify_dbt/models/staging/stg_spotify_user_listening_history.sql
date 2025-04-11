@@ -8,3 +8,11 @@ This model:
 - Identifies skips vs. complete plays
 - Adds context about device type and listening session
 */
+
+{{
+    config(
+        materialized='view',
+        schema='staging',
+        tags=['daily_refresh']
+    )
+}}

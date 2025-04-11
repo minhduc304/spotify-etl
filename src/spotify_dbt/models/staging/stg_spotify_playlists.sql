@@ -8,3 +8,11 @@ This model:
 - Handles collaborative playlist indicators
 - Preserves playlist owner information
 */
+
+{{ 
+    config(
+        materialized='view',
+        schema='staging',
+        tags=['daily_refresh']
+    ) 
+}}

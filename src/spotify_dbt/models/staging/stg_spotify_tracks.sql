@@ -8,3 +8,11 @@ This model:
 - Handles missing values and data type conversions
 - Adds metadata about when the data was loaded
 */
+
+{{
+    config(
+        materialized='view',
+        schema='staging',
+        tags=['daily_refresh']
+    )
+}}

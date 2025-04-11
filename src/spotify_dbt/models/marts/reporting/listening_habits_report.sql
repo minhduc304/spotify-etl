@@ -8,3 +8,11 @@ This model:
 - Identifies listening habit changes
 - Compares user patterns to platform averages
 */
+
+{{
+    config(
+        materialized='table',
+        schema='reporting',
+        tags=['report', 'weekly']
+    )
+}}
