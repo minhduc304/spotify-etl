@@ -1,0 +1,18 @@
+version: 1
+
+sources: 
+  - name: spotify
+    description: "Source data from Spotify API"
+    database: {{ env_var('SPOTIFY_DB') }}
+    schema: public 
+    tables: 
+      - name: spotify_albums
+        description: "Details about albums the user listened to"
+      - name: spotify_artists
+        description: "Details about artists the user listened to"
+      - name: spotify_playlists
+        description: "Details about playlists the user created or followed"
+      - name: spotify_tracks
+        description: "Details about tracks the user listened to"
+      - name: spotify_user_listening_history
+        description: "User's listening history, including timestamps and track IDs"

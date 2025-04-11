@@ -1,0 +1,24 @@
+version: 2 
+
+models: 
+  - name: artist_popularity_trends
+    description: "Aggregates artist popularity trends over time, user-specific affinity."
+    columns:
+  
+  - name: genre_affinity_scores
+    description: "Aggregates genre affinity scores for user, based on their listening history."
+    columns:
+
+  - name: playlist_composition_metrics
+    description: "Aggregates metrics on playlist composition, including genre diversity and artist variety."
+    columns:
+  
+  - name: track_feature_analysis
+    descriptipon: "Aggregates analysis of track features, including tempo, energy levels; and user listening mood patterns."
+    columns:
+  
+  - name: user_listening_patterns
+    description: "Aggregates user listening patterns, including time of day, day of week, genre preferences, track diversity and artist exploration."
+    columns:
+
+  

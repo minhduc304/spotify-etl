@@ -1,0 +1,22 @@
+version: 1 
+
+models:
+  - name: daily_listening_summary
+    description: "Aggregates daily listening summary for each user, including total streams, unique artists, and genres."
+    columns:
+  
+  - name: genre_breakdown_report
+    description: "Shows genre distribution and trends; correlations with listening contexts e.g. time of day, day of week."
+    columns:
+  
+  - name: listening_habits_report
+    description: "Provides insights into listening behavior patterns like consistency, discovery rates, and habit changes etc."
+    columns:
+  
+  - name: playlist_diversity_report
+    description: "Reports on compostion of playlists, including genre diversity, artist variety, and freshness metric."
+    columns:
+  
+  - name: top_artists_report
+    description: "Aggregates top artists with play counts, looking at diversity, growth metrics, familiarity."
+    columns:
