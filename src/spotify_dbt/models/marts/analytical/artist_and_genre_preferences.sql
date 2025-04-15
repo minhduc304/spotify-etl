@@ -1,4 +1,4 @@
--- artist_popularity_trends.sql
+-- artist_and_genre_preferences.sql
 /*
 Purpose: Analyze how artist popularity changes over time
 This model:
@@ -7,10 +7,7 @@ This model:
 - Identifies rising and falling artists in user preferences
 - Correlates artist genre with popularity fluctuations
 - Calculates user-specific artist affinity scores
-*/
 
--- genre_affinity_scores.sql
-/*
 Purpose: Calculate user preferences for different music genres
 This model:
 - Creates user-to-genre affinity scores based on listening history
