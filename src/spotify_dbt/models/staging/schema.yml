@@ -1,18 +1,404 @@
 version: 1
 
-sources: 
+sources:
   - name: spotify
-    description: "Source data from Spotify API"
-    database: {{ env_var('SPOTIFY_DB') }}
-    schema: public 
-    tables: 
-      - name: spotify_albums
-        description: "Details about albums the user listened to"
-      - name: spotify_artists
-        description: "Details about artists the user listened to"
-      - name: spotify_playlists
-        description: "Details about playlists the user created or followed"
-      - name: spotify_tracks
-        description: "Details about tracks the user listened to"
-      - name: spotify_user_listening_history
-        description: "User's listening history, including timestamps and track IDs"
+    description: Raw data from Spotify API loaded via ETL process
+    database: postgres # adjust if different
+    schema: public # adjust to match your raw data schema
+    tables:
+      - name: tracks
+        description: Raw track data from Spotify API
+        columns:
+          - name: track_id
+            description: Unique identifier for a track
+            tests:
+              - unique
+              - not_null
+          - name: name
+            description: Track title
+          - name: album_id
+            description: Reference to parent album
+          - name: duration_ms
+            description: Track duration in milliseconds
+          - name: popularity
+            description: Track popularity score (0-100)
+          - name: explicit
+            description: Whether the track contains explicit lyrics
+          - name: track_number
+            description: Position of track in album
+          - name: is_local
+            description: Whether track is a local file
+          - name: uri
+            description: Spotify URI for the track
+          - name: time_signature
+            description: Time signature of the track
+          - name: added_at
+            description: Timestamp when the track was added to the database
+
+      - name: albums
+        description: Album metadata from Spotify API
+        columns:
+          - name: album_id
+            description: Unique identifier for an album
+            tests:
+              - unique
+              - not_null
+          - name: name
+            description: Album title
+          - name: album_type
+            description: Type of album (album, single, compilation)
+          - name: release_date
+            description: Release date of the album
+          - name: release_date_precision
+            description: Precision of the release date (day, month, year)
+          - name: total_tracks
+            description: Total number of tracks in the album
+          - name: added_at
+            description: Timestamp when the album was added to the database
+
+      - name: artists
+        description: Artist metadata from Spotify API
+        columns:
+          - name: artist_id
+            description: Unique identifier for an artist
+            tests:
+              - unique
+              - not_null
+          - name: name
+            description: Artist name
+          - name: popularity
+            description: Artist popularity score (0-100)
+          - name: followers
+            description: Number of followers
+          - name: genres
+            description: JSON array of genres associated with the artist
+          - name: added_at
+            description: Timestamp when the artist was added to the database
+
+      - name: album_artists
+        description: Mapping table between albums and artists
+        columns:
+          - name: album_id
+            description: Reference to album
+          - name: artist_id
+            description: Reference to artist
+        tests:
+          - unique:
+              name: album_artist_unique_combination
+              columns: ["album_id", "artist_id"]
+
+      - name: track_artists
+        description: Mapping table between tracks and artists
+        columns:
+          - name: track_id
+            description: Reference to track
+          - name: artist_id
+            description: Reference to artist
+          - name: position
+            description: Position/order of artist in track credits
+        tests:
+          - unique:
+              name: track_artist_unique_combination
+              columns: ["track_id", "artist_id"]
+
+      - name: playlists
+        description: Playlist metadata from Spotify API
+        columns:
+          - name: playlist_id
+            description: Unique identifier for a playlist
+            tests:
+              - unique
+              - not_null
+          - name: name
+            description: Playlist name
+          - name: description
+            description: Playlist description
+          - name: owner_id
+            description: User ID of playlist owner
+          - name: is_public
+            description: Whether the playlist is public
+          - name: is_collaborative
+            description: Whether the playlist is collaborative
+          - name: snapshot_id
+            description: Version identifier for the playlist
+          - name: added_at
+            description: Timestamp when the playlist was added to the database
+
+      - name: playlist_tracks
+        description: Mapping table between playlists and tracks
+        columns:
+          - name: playlist_id
+            description: Reference to playlist
+          - name: track_id
+            description: Reference to track
+          - name: position
+            description: Position of track within playlist
+          - name: added_at
+            description: When the track was added to the playlist
+          - name: added_by
+            description: User ID who added the track
+        tests:
+          - unique:
+              name: playlist_track_position_unique
+              columns: ["playlist_id", "track_id", "position"]
+
+      - name: user_listening_history
+        description: User's track play history from Spotify
+        columns:
+          - name: id
+            description: Unique identifier for the listening event
+            tests:
+              - unique
+              - not_null
+          - name: track_id
+            description: Reference to track
+          - name: played_at
+            description: Timestamp when the track was played
+            tests:
+              - not_null
+          - name: ms_played
+            description: Duration played in milliseconds
+          - name: context_type
+            description: Context of play (playlist, album, etc)
+          - name: context_id
+            description: ID of the context
+
+models:
+  - name: stg_spotify_tracks
+    description: |
+      Standardized track data with additional metrics and relationships.
+      Cleans and transforms raw track data from Spotify API.
+    columns:
+      - name: track_id
+        description: Unique identifier for the track
+        tests:
+          - unique
+          - not_null
+      - name: track_name
+        description: Track title
+      - name: album_id
+        description: Reference to the album
+      - name: album_name
+        description: Name of the album containing the track
+      - name: release_date
+        description: Album release date
+      - name: duration_ms
+        description: Track duration in milliseconds
+      - name: duration_seconds
+        description: Track duration in seconds
+      - name: duration_minutes
+        description: Track duration in minutes
+      - name: duration_formatted
+        description: Track duration in MM:SS format
+      - name: popularity
+        description: Track popularity score (0-100)
+      - name: popularity_tier
+        description: Categorized popularity (very_high, high, medium, low, very_low)
+      - name: explicit
+        description: Whether the track contains explicit content
+      - name: track_number
+        description: Position of track within album
+      - name: is_local
+        description: Whether track is a local file
+      - name: uri
+        description: Spotify URI for the track
+      - name: spotify_id
+        description: Extracted Spotify ID from URI
+      - name: time_signature
+        description: Time signature of the track
+      - name: primary_artist_id
+        description: ID of the primary artist (first position)
+      - name: primary_artist_name
+        description: Name of the primary artist
+      - name: artist_ids
+        description: Array of all artist IDs on this track
+      - name: artist_names
+        description: Array of all artist names on this track
+      - name: artist_count
+        description: Number of artists on this track
+      - name: is_collaboration
+        description: Whether the track has multiple artists
+      - name: added_at
+        description: When the track was added to the database
+
+  - name: stg_spotify_albums
+    description: |
+      Standardized album data with artist relationships and release information.
+      Structures album metadata and links to artists.
+    columns:
+      - name: album_id
+        description: Unique identifier for the album
+        tests:
+          - unique
+          - not_null
+      - name: album_name
+        description: Album title
+      - name: album_type
+        description: Type of album (album, single, compilation)
+      - name: release_date
+        description: Standardized release date
+      - name: release_date_precision
+        description: Precision of the release date (day, month, year)
+      - name: total_tracks
+        description: Total number of tracks in the album
+      - name: artist_ids
+        description: Array of artist IDs associated with this album
+      - name: artist_names
+        description: Array of artist names associated with this album
+      - name: added_at
+        description: When the album was added to the database
+      - name: days_since_release
+        description: Number of days since album was released
+      - name: release_category
+        description: Categorized by age (new_release, recent, standard, catalog)
+      - name: release_year
+        description: Year the album was released
+
+  - name: stg_spotify_artists
+    description: |
+      Normalized artist data with genre processing and metrics.
+      Extracts and formats artist information from Spotify API.
+    columns:
+      - name: artist_id
+        description: Unique identifier for the artist
+        tests:
+          - unique
+          - not_null
+      - name: artist_name
+        description: Artist name
+      - name: popularity
+        description: Artist popularity score (0-100)
+      - name: popularity_tier
+        description: Categorized popularity (very_high, high, medium, low, very_low)
+      - name: followers
+        description: Number of followers
+      - name: follower_tier
+        description: Categorized by follower count (mega, major, large, medium, small, micro)
+      - name: genres
+        description: Array of genres associated with the artist
+      - name: genre_count
+        description: Number of genres associated with the artist
+      - name: primary_genre
+        description: Primary genre (first in list)
+      - name: track_count
+        description: Number of tracks by this artist in the database
+      - name: album_count
+        description: Number of albums by this artist in the database
+      - name: added_at
+        description: When the artist was added to the database
+      - name: is_prolific
+        description: Whether the artist has many albums (>5)
+
+  - name: stg_spotify_playlists
+    description: |
+      Structured playlist data with track relationships and metrics.
+      Normalizes playlist metadata and calculates compositional metrics.
+    columns:
+      - name: playlist_id
+        description: Unique identifier for the playlist
+        tests:
+          - unique
+          - not_null
+      - name: playlist_name
+        description: Playlist name
+      - name: description
+        description: Playlist description
+      - name: owner_id
+        description: User ID of playlist owner
+      - name: playlist_type
+        description: Type of playlist (spotify_official, user_created)
+      - name: is_public
+        description: Whether the playlist is public
+      - name: is_collaborative
+        description: Whether the playlist is collaborative
+      - name: snapshot_id
+        description: Version identifier for the playlist
+      - name: added_at
+        description: When the playlist was added to the database
+      - name: track_count
+        description: Number of tracks in the playlist
+      - name: total_duration_ms
+        description: Total duration in milliseconds
+      - name: duration_minutes
+        description: Total duration in minutes
+      - name: duration_formatted
+        description: Total duration in HH:MM format
+      - name: avg_track_popularity
+        description: Average popularity score of tracks
+      - name: unique_artists_count
+        description: Number of unique artists in the playlist
+      - name: unique_albums_count
+        description: Number of unique albums in the playlist
+      - name: explicit_tracks_count
+        description: Number of explicit tracks in the playlist
+      - name: artist_diversity_ratio
+        description: Ratio of unique artists to total tracks
+      - name: album_diversity_ratio
+        description: Ratio of unique albums to total tracks
+      - name: contains_explicit_content
+        description: Whether the playlist contains explicit content
+      - name: playlist_size_category
+        description: Size category (large, medium, small, mini)
+      - name: last_updated_at
+        description: When the playlist was last updated
+      - name: days_since_update
+        description: Days since the playlist was last updated
+      - name: freshness_category
+        description: Freshness category (very_fresh, fresh, recent, stale)
+
+  - name: stg_spotify_user_listening_history
+    description: |
+      Transformed user listening history with temporal analysis and play metrics.
+      Structures streaming history and calculates engagement metrics.
+    columns:
+      - name: id
+        description: Unique identifier for the listening event
+        tests:
+          - unique
+          - not_null
+      - name: track_id
+        description: Reference to track
+      - name: track_name
+        description: Name of the track
+      - name: album_id
+        description: Reference to the album
+      - name: album_name
+        description: Name of the album
+      - name: primary_artist_id
+        description: Reference to primary artist
+      - name: primary_artist_name
+        description: Name of the primary artist
+      - name: played_at
+        description: Timestamp when the track was played
+      - name: hour_of_day
+        description: Hour when track was played (0-23)
+      - name: day_of_week
+        description: Day of week when track was played (0-6)
+      - name: week_of_year
+        description: Week of year when track was played
+      - name: month
+        description: Month when track was played
+      - name: year
+        description: Year when track was played
+      - name: time_of_day
+        description: Categorized time (morning, afternoon, evening, night)
+      - name: day_type
+        description: Weekday or weekend
+      - name: ms_played
+        description: Duration played in milliseconds
+      - name: duration_ms
+        description: Total track duration in milliseconds
+      - name: completion_percentage
+        description: Percentage of track that was played
+      - name: is_skipped
+        description: Whether the track was skipped (<30% played)
+      - name: is_completed
+        description: Whether the track was completed (>90% played)
+      - name: context_type
+        description: Context of play (playlist, album, artist)
+      - name: context_id
+        description: ID of the context
+      - name: session_id
+        description: Identified listening session
+      - name: session_position
+        description: Position of track within the session
