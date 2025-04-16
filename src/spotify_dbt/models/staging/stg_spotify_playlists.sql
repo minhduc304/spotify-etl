@@ -16,3 +16,7 @@ This model:
         tags=['daily_refresh']
     ) 
 }}
+
+with playlists_source as (
+    
+)
