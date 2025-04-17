@@ -222,7 +222,7 @@ models:
         description: When the track was added to the database
 
   - name: stg_spotify_albums
-    description: |
+    description: 
       Standardized album data with artist relationships and release information.
       Structures album metadata and links to artists.
     columns:
@@ -255,7 +255,7 @@ models:
         description: Year the album was released
 
   - name: stg_spotify_artists
-    description: |
+    description: 
       Normalized artist data with genre processing and metrics.
       Extracts and formats artist information from Spotify API.
     columns:
