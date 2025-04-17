@@ -17,5 +17,4 @@ This model:
         tags=['report', 'weekly']
     )
 }}
-
-`   
+   

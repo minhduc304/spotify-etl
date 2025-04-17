@@ -111,4 +111,7 @@ select
 from normalized_affinity
 order by normalized_score DESC
 
+{% endmacro %}
+
+
 

@@ -1,18 +1,18 @@
 -- cotent_preferences_report.sql
 /*
-Purpose: Deliver comprehensive genre analytics
+Purpose: User-facing music preference reporting and insights
 This model:
-- Shows genre distribution across all listening
-- Tracks genre trends over time periods
-- Identifies emerging genres in user's listening
-- Correlates genres with listening contexts (time of day, etc)
-- Measures genre exploration vs. genre loyalty
-- Ranks artists by play counts across time periods
-- Calculates artist growth metrics (week-over-week changes)
-- Segments artists by familiarity (new discoveries vs favorites)
-- Shows diversity of genre across top artists
-- Provides time-based artist ranking changes
-- Source from stg_spotify_artists, stg_spotify_albums_and_tracks, stg_spotify_user_listening_history
+- Builds on artist_and_genre_preferences analytical model
+- Enhances raw affinity scores with contextual dimensions
+- Segments artists by familiarity and listening patterns
+- Visualizes genre distribution across listening sessions
+- Correlates genres with listening contexts (time of day, weekday/weekend)
+- Calculates period-over-period metrics (weekly/monthly changes)
+- Highlights emerging genres and trending artists
+- Generates user-friendly insights for dashboard presentation
+
+Sources from: artist_and_genre_preferences, stg_spotify_user_listening_history
+*/
 */
 
 {{
