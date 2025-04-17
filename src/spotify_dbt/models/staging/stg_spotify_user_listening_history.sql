@@ -135,4 +135,4 @@ select
     row_number() over (partition by lh.session_id order by lh.played_at) as session_position
 from listening_history_source lh
 join tracks_source t on lh.track_id = t.track_id
-left join albums_source on t.album_id = a.album_id
+left join albums_source a on t.album_id = a.album_id
