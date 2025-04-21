@@ -4,3 +4,4 @@ spotipy==2.25.1
 requests==2.32.3
 dbt-postgres==1.9.0
 pandas==2.2.3
+essentia-tensorflow==2.1b6.dev1177
