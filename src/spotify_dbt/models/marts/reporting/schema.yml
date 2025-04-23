@@ -1,22 +1,250 @@
-version: 1 
+version: 1
 
 models:
-  - name: daily_listening_summary
-    description: "Aggregates daily listening summary for each user, including total streams, unique artists, and genres."
+  - name: content_preferences_report
+    description: >
+      User-facing music preference reporting and insights. This model builds on artist_and_genre_preferences analytical model,
+      enhances raw affinity scores with contextual dimensions, segments artists by familiarity and listening patterns,
+      visualizes genre distribution across listening sessions, correlates genres with listening contexts,
+      calculates period-over-period metrics, highlights emerging genres and trending artists,
+      and generates user-friendly insights for dashboard presentation.
+    config:
+      tags: ["report", "daily"]
     columns:
-  
-  - name: genre_breakdown_report
-    description: "Shows genre distribution and trends; correlations with listening contexts e.g. time of day, day of week."
+      - name: report_section
+        description: "Section of the report (artist_preferences, genre_preferences, monthly_summary, user_insights)"
+      - name: entity_name
+        description: "Name of the entity (artist, genre, month, or insight type) being reported on"
+      - name: affinity_score
+        description: "User's calculated affinity score for this entity"
+      - name: affinity_category
+        description: "Categorized affinity level (high, medium, low)"
+      - name: preference_rank
+        description: "Ranked position of entity within its type"
+      - name: spotify_popularity
+        description: "Artist's popularity score from Spotify (0-100)"
+      - name: popularity_tier
+        description: "Categorized popularity level"
+      - name: followers
+        description: "Number of followers for the artist"
+      - name: followers_tier
+        description: "Categorized follower count level"
+      - name: primary_genre
+        description: "Main genre associated with the artist"
+      - name: genres
+        description: "Complete list of genres associated with the artist"
+      - name: familiarity_segment
+        description: "Artist segmentation based on user affinity and popularity"
+      - name: recent_plays
+        description: "Number of times played in the most recent period"
+      - name: active_days
+        description: "Number of distinct days the entity was played"
+      - name: active_sessions
+        description: "Number of distinct listening sessions including this entity"
+      - name: avg_completion_rate
+        description: "Average track completion percentage for this entity"
+      - name: complete_plays
+        description: "Number of times tracks were played to completion"
+      - name: skipped_plays
+        description: "Number of times tracks were skipped"
+      - name: current_period_plays
+        description: "Number of plays in the current period (last 30 days)"
+      - name: previous_period_plays
+        description: "Number of plays in the previous period (30-60 days ago)"
+      - name: play_change_percentage
+        description: "Percentage change in plays between current and previous periods"
+      - name: trending_status
+        description: "Status indicator for trend direction (trending_up, trending_down, stable, etc.)"
+      - name: morning_pct
+        description: "Percentage of plays during morning hours (genre only)"
+      - name: afternoon_pct
+        description: "Percentage of plays during afternoon hours (genre only)"
+      - name: evening_pct
+        description: "Percentage of plays during evening hours (genre only)"
+      - name: night_pct
+        description: "Percentage of plays during night hours (genre only)"
+      - name: preferred_time
+        description: "Time of day with highest play percentage (genre only)"
+      - name: weekday_pct
+        description: "Percentage of plays during weekdays (genre only)"
+      - name: weekend_pct
+        description: "Percentage of plays during weekends (genre only)"
+      - name: preferred_day_type
+        description: "Preferred day type (weekday or weekend) based on play distribution (genre only)"
+      - name: is_emerging
+        description: "Flag indicating if genre is newly emerging in user's listening habits"
+      - name: generated_at
+        description: "Timestamp when the report was generated or insight text for user_insights section"
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - report_section
+            - entity_name
+
+  - name: listening_activity_report
+    description: >
+      Provides day-level summary metrics for dashboards. This model creates daily metrics for total listening time,
+      counts unique tracks and artists per day, shows peak listening hours, compares weekday vs weekend listening patterns,
+      provides trend indicators (up/down vs previous day/week), measures listening consistency and routines,
+      calculates discovery rates for new music, and identifies listening habit changes.
+    config:
+      tags: ["report", "daily"]
     columns:
-  
-  - name: listening_habits_report
-    description: "Provides insights into listening behavior patterns like consistency, discovery rates, and habit changes etc."
-    columns:
-  
+      - name: listening_date
+        description: "Calendar date of listening activity"
+      - name: day_type
+        description: "Type of day (weekday or weekend)"
+      - name: total_plays
+        description: "Total number of tracks played on this date"
+      - name: unique_tracks
+        description: "Number of distinct tracks played on this date"
+      - name: unique_artists
+        description: "Number of distinct artists played on this date"
+      - name: total_hours_played
+        description: "Total listening time in hours"
+      - name: completed_plays
+        description: "Number of tracks played to completion"
+      - name: skipped_plays
+        description: "Number of tracks skipped before completion"
+      - name: avg_completion_percentage
+        description: "Average completion percentage across all tracks"
+      - name: completion_rate
+        description: "Percentage of tracks completed out of total plays"
+      - name: peak_hour
+        description: "Hour of day with the most listening activity"
+      - name: peak_hour_minutes
+        description: "Minutes played during the peak hour"
+      - name: new_tracks_count
+        description: "Number of tracks played for the first time on this date"
+      - name: discovery_rate
+        description: "Percentage of unique tracks that were new discoveries"
+      - name: daily_hours_change
+        description: "Change in listening hours compared to previous day"
+      - name: daily_trend
+        description: "Trend indicator (up/down/same) compared to previous day"
+      - name: weekly_hours_change
+        description: "Change in listening hours compared to same day in previous week"
+      - name: weekly_trend
+        description: "Trend indicator (up/down/same) compared to previous week"
+      - name: active_days_last_7
+        description: "Number of active listening days in the past 7 days"
+      - name: listening_time_stability
+        description: "Standard deviation of daily listening hours (routine stability)"
+      - name: most_active_time_of_day
+        description: "Time period with the most listening activity (morning/afternoon/evening/night)"
+    tests:
+      - unique:
+          column_name: listening_date
+
   - name: playlist_diversity_report
-    description: "Reports on compostion of playlists, including genre diversity, artist variety, and freshness metric."
+    description: >
+      Report on compositional diversity of playlists. This model creates genre distribution metrics for playlists,
+      calculates freshness metrics (new releases vs classics), analyzes artist diversity within playlists,
+      and compares user playlists to Spotify's editorial playlists.
+    config:
+      tags: ["report", "weekly"]
     columns:
-  
-  - name: top_artists_report
-    description: "Aggregates top artists with play counts, looking at diversity, growth metrics, familiarity."
-    columns:
+      - name: playlist_id
+        description: "Unique identifier for the playlist"
+      - name: playlist_name
+        description: "Name of the playlist"
+      - name: playlist_type
+        description: "Type of playlist (editorial or user)"
+      - name: owner_id
+        description: "ID of the playlist owner"
+      - name: track_count
+        description: "Number of tracks in the playlist"
+      - name: total_duration_minutes
+        description: "Total duration of the playlist in minutes"
+      - name: unique_artist_count
+        description: "Number of distinct artists in the playlist"
+      - name: artist_track_ratio
+        description: "Ratio of unique artists to total tracks"
+      - name: artist_diversity_category
+        description: "Categorized level of artist diversity"
+      - name: unique_genre_count
+        description: "Number of distinct genres in the playlist"
+      - name: top_5_genres
+        description: "List of the top 5 genres in the playlist"
+      - name: top_5_genre_percentages
+        description: "Percentage distribution of top 5 genres"
+      - name: genre_concentration_index
+        description: "Herfindahl index for genre concentration (lower means more diverse)"
+      - name: genre_diversity_category
+        description: "Categorized level of genre diversity"
+      - name: avg_track_age_days
+        description: "Average age of tracks in days since release"
+      - name: new_release_ratio
+        description: "Proportion of tracks released in the last 30 days"
+      - name: recent_release_ratio
+        description: "Proportion of tracks released in the last year"
+      - name: standard_release_ratio
+        description: "Proportion of tracks released 1-5 years ago"
+      - name: catalog_release_ratio
+        description: "Proportion of tracks released over 5 years ago"
+      - name: unique_decades
+        description: "Number of distinct decades represented in the playlist"
+      - name: decade_breakdown
+        description: "Percentage breakdown of tracks by decade"
+      - name: freshness_category
+        description: "Categorized level of music freshness"
+      - name: very_high_artist_ratio
+        description: "Proportion of very high popularity artists"
+      - name: high_artist_ratio
+        description: "Proportion of high popularity artists"
+      - name: medium_artist_ratio
+        description: "Proportion of medium popularity artists"
+      - name: low_artist_ratio
+        description: "Proportion of low popularity artists"
+      - name: very_low_artist_ratio
+        description: "Proportion of very low popularity artists"
+      - name: popularity_category
+        description: "Categorized popularity focus of the playlist"
+      - name: mega_artist_ratio
+        description: "Proportion of mega (most followers) artists"
+      - name: major_artist_ratio
+        description: "Proportion of major (very high followers) artists"
+      - name: large_artist_ratio
+        description: "Proportion of large (high followers) artists"
+      - name: medium_followers_artist_ratio
+        description: "Proportion of medium followers artists"
+      - name: small_artist_ratio
+        description: "Proportion of small followers artists"
+      - name: micro_artist_ratio
+        description: "Proportion of micro (least followers) artists"
+      - name: collaboration_ratio
+        description: "Proportion of tracks that are collaborations"
+      - name: explicit_content_ratio
+        description: "Proportion of tracks marked as explicit"
+      - name: avg_track_popularity
+        description: "Average popularity score of tracks in the playlist"
+      - name: overall_diversity_score
+        description: "Composite score measuring overall diversity (0-1)"
+      - name: overall_diversity_category
+        description: "Categorized overall diversity level"
+    tests:
+      - unique:
+          column_name: playlist_id
+
+sources:
+  - name: analytics
+    schema: analytics
+    tables:
+      - name: artist_and_genre_preferences
+        description: "Core analytics model containing artist and genre preferences with affinity scores"
+
+  - name: staging
+    schema: staging
+    tables:
+      - name: stg_spotify_user_listening_history
+        description: "Staging table containing user's Spotify listening history"
+      - name: stg_spotify_artists
+        description: "Staging table containing Spotify artist information"
+      - name: stg_spotify_albums
+        description: "Staging table containing Spotify album information"
+      - name: stg_spotify_tracks
+        description: "Staging table containing Spotify track information"
+      - name: stg_spotify_playlists
+        description: "Staging table containing Spotify playlist metadata"
+      - name: stg_spotify_playlist_tracks
+        description: "Staging table containing track listings for each Spotify playlist"
