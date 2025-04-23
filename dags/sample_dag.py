@@ -1,12 +1,11 @@
 from airflow import DAG
 from airflow.providers.postgres.operators.postgres import PostgresOperator
-from datetime import datetime, timedelta
+from datetime import datetime
 
 
 default_args = {
     'owner': 'airflow',
     'retries': 1,
-    'retry_delay': timedelta(minutes=5),
 }
 
 dag = DAG(
@@ -18,20 +17,17 @@ dag = DAG(
     catchup=False,
 )
 
-get_recently_played_task = PostgresOperator(
-    task_id='get_recently_played',
+get_user_listening_history = PostgresOperator(
+    task_id='get_user_listening_history',
     postgres_conn_id='postgres',
     sql="""
         SELECT EXISTS (
             SELECT FROM information_schema.tables 
-            WHERE table_name = 'recently_played'
+            WHERE table_name = 'user_listening_history'
         );
     """,
     autocommit=True,
     dag=dag,
 )
 
-
-
-
-get_recently_played_task
+get_user_listening_history
