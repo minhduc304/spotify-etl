@@ -16,7 +16,7 @@ This model:
 
 {{
     config(
-        materialized='table',
+        materialized='view',
         schema='reporting',
         tags=['report', 'daily']
     )
