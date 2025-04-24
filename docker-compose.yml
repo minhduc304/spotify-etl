@@ -10,6 +10,10 @@ x-airflow-common: &airflow-common
     - AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION=${AIRFLOW_DAGS_PAUSED_AT_CREATION}
     - AIRFLOW__CORE__LOAD_EXAMPLES=${AIRFLOW_LOAD_EXAMPLES}
     - AIRFLOW__API__AUTH_BACKENDS=airflow.api.auth.backend.basic_auth
+    - AIRFLOW__LOGGING__DELETE_WORKER_LOGS_AFTER_DAYS=30
+    - AIRFLOW__LOGGING__MAX_LOG_RETENTION_DAYS=30
+    - AIRFLOW__LOGGING__DAG_PROCESSOR_LOG_RETENTION_DAYS=30
+    - AIRFLOW__LOGGING__TASK_LOG_READER=task
   volumes:
     - ./dags:/opt/airflow/dags
     - ./logs:/opt/airflow/logs
