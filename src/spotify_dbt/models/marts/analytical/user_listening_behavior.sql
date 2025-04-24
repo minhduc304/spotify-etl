@@ -16,8 +16,7 @@ This model:
         materialized='table',
         schema='analytics',
         sort=date_day,
-        dist='user_id',
-        tags=['daily']
+        tags=['daily', playlist_insights]
 
     )
 }}
