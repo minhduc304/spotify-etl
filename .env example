@@ -30,3 +30,5 @@ GRAFANA_ADMIN_USER=admin
 GRAFANA_ADMIN_PASSWORD=your_secure_grafana_password
 GRAFANA_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource
 
+# Miscellaneous
+LOGS_PATH=/your/path/to/logs #used for dags that clean up logs
