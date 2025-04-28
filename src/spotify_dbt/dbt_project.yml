@@ -1,11 +1,6 @@
-
-# This file is a configuration file for dbt (data build tool).
-# It defines the project name, version, and various settings for dbt.
-# Full documentation: https://docs.getdbt.com/docs/dbt-project-yml
-
-
-name: 'spotify_etl'
+name: 'spotify_dbt'
 version: '1.0.0'
+config-version: 2
 
 # This setting configures which "profile" dbt uses for this project.
 profile: 'spotify_dbt'
@@ -20,18 +15,38 @@ seed-paths: ["seeds"]
 macro-paths: ["macros"]
 snapshot-paths: ["snapshots"]
 
+target-path: "target"  # directory which will store compiled SQL files
 clean-targets:         # directories to be removed by `dbt clean`
   - "target"
   - "dbt_packages"
-
+  - "logs"
 
 # Configuring models
-# Full documentation: https://docs.getdbt.com/docs/configuring-models
-
-# In this example config, we tell dbt to build all models in the example/
-# directory as views. These settings can be overridden in the individual model
-# files using the `{{ config(...) }}` macro.
 models:
   spotify_dbt:
-    # Config indicated by + and applies to all files under models/example/
-    
+    # Config indicated by + and applies to all files under models/
+    +materialized: view
+
+    staging:
+      +materialized: view
+      
+    marts:      
+      analytical:
+        +materialized: table
+        
+      reporting:
+        +materialized: table
+        listening_activity_report:
+          +materialized: view
+
+    # utils:
+    #   +materialized: view
+
+# Macros configuration
+macros:
+  spotify_dbt:
+    calculate_affinity_scores:
+      +description: "Calculates affinity scores between users and content"
+    generate_audio_feature_segments:
+      +description: "Generates segments based on audio features"
+
