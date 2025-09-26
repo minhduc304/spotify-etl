@@ -22,12 +22,12 @@ with playlist_tracks as (
     select
         p.playlist_id,
         p.playlist_name,
-        p.playlist_type, -- assuming editorial vs user is captured here
+        p.playlist_type,
         p.owner_id,
         pt.track_id,
         pt.position as track_position
     from {{ ref('stg_spotify_playlists') }} p
-    join {{ ref('stg_spotify_playlist_tracks') }} pt on p.playlist_id = pt.playlist_id
+    join {{ source('spotify', 'playlist_tracks') }} pt on p.playlist_id = pt.playlist_id
 ),
 
 track_details as (
@@ -158,7 +158,7 @@ playlist_top_genres as (
 top_genres_agg as (
     select
         playlist_id,
-        array_agg(primary_genre order by genre_rank) filter (where genre_rank <= a5) as top_5_genres,
+        array_agg(primary_genre order by genre_rank) filter (where genre_rank <= 5) as top_5_genres,
         array_agg(genre_percentage order by genre_rank) filter (where genre_rank <= 5) as top_5_genre_percentages
     from playlist_top_genres
     group by playlist_id

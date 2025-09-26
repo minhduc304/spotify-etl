@@ -21,7 +21,7 @@ dag = DAG(
 # Find and remove log files older than specfied days
 cleanup_task = BashOperator(
     task_id='cleanup_airflow_logs',
-    bash_command='find ${LOGS_PATH} -type f -name "*.log" -mtime +30 -delete',
+    bash_command='find $LOGS_PATH -type f -name "*.log" -mtime +30 -delete',
     dag=dag,
 )
 

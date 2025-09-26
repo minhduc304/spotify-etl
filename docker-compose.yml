@@ -2,14 +2,14 @@ x-airflow-common: &airflow-common
   image: apache/airflow:2.7.1
   environment:
     - AIRFLOW__CORE__EXECUTOR=CeleryExecutor
-    - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres/${POSTGRES_DB}
-    - AIRFLOW__CELERY__RESULT_BACKEND=db+postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres/${POSTGRES_DB}
+    - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres-airflow/${POSTGRES_DB}
+    - AIRFLOW__CELERY__RESULT_BACKEND=db+postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres-airflow/${POSTGRES_DB}
     - AIRFLOW__CELERY__BROKER_URL=redis://redis:6379/0
     - AIRFLOW__CORE__FERNET_KEY=${AIRFLOW_FERNET_KEY}
     - AIRFLOW__CORE__TEST_CONNECTION='Enabled'
     - AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION=${AIRFLOW_DAGS_PAUSED_AT_CREATION}
     - AIRFLOW__CORE__LOAD_EXAMPLES=${AIRFLOW_LOAD_EXAMPLES}
-    - AIRFLOW__API__AUTH_BACKENDS=airflow.api.auth.backend.basic_auth
+    - AIRFLOW__API__AUTH_BACKENDS=airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session
     - AIRFLOW__LOGGING__DELETE_WORKER_LOGS_AFTER_DAYS=30
     - AIRFLOW__LOGGING__MAX_LOG_RETENTION_DAYS=30
     - AIRFLOW__LOGGING__DAG_PROCESSOR_LOG_RETENTION_DAYS=30
@@ -22,9 +22,9 @@ x-airflow-common: &airflow-common
 
 services:
   # PostgreSQL database for storing Airflow metadata
-  postgres:
+  postgres-airflow:
     image: postgres:15
-    container_name: postgres
+    container_name: postgres_airflow
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
@@ -32,17 +32,38 @@ services:
     ports:
       - "${POSTGRES_PORT}:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - airflow_metadata:/var/lib/postgresql/data
+      - ./init-scripts/init-airflow-db.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
       interval: 5s
       retries: 5
-    restart: always
+    restart: unless-stopped
+
+  postgres-spotify:
+  # Main db storing spotify data
+      image: postgres:15
+      container_name: postgres_spotify
+      environment:
+        - POSTGRES_USER=${SPOTIFY_DB_USER}
+        - POSTGRES_PASSWORD=${SPOTIFY_DB_PASSWORD}
+        - POSTGRES_DB=${SPOTIFY_DB}
+        - POSTGRES_INITDB_ARGS="--encoding=UTF-8"
+      ports:
+        - "${SPOTIFY_DB_PORT}:5432"
+      volumes:
+        - spotify_data:/var/lib/postgresql/data
+        - ./init-scripts/init-spotify-db.sql:/docker-entrypoint-initdb.d/init.sql
+      healthcheck:
+        test: [ "CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}" ]
+        interval: 5s
+        retries: 5
+      restart: unless-stopped
 
   # Redis for Airflow Celery executor
   redis:
     image: redis:7
-    container_name: spotify_redis
+    container_name: redis
     ports:
       - "${REDIS_PORT}:6379"
     healthcheck:
@@ -55,9 +76,9 @@ services:
   # Airflow webserver
   airflow-webserver:
     <<: *airflow-common
-    container_name: spotify_airflow_webserver
+    container_name: airflow_webserver
     depends_on:
-      - postgres
+      - postgres-airflow
       - redis
     ports:
       - "${AIRFLOW_WEBSERVER_PORT}:8080"
@@ -72,16 +93,17 @@ services:
   # Airflow scheduler
   airflow-scheduler:
     <<: *airflow-common
-    container_name: spotify_airflow_scheduler
+    container_name: airflow_scheduler
     depends_on:
-      - airflow-webserver
+      airflow-init:
+        condition: service_completed_successfully
     command: scheduler
     restart: always
 
   # Airflow worker
   airflow-worker:
     <<: *airflow-common
-    container_name: spotify_airflow_worker
+    container_name: airflow_worker
     depends_on:
       - airflow-scheduler
     command: celery worker
@@ -90,36 +112,24 @@ services:
   # Airflow initialization (runs once to set up the database and create the first user)
   airflow-init:
     <<: *airflow-common
-    container_name: spotify_airflow_init
+    container_name: airflow_init
     depends_on:
-      - postgres
-    environment:
-      - _AIRFLOW_DB_MIGRATE=true
-      - _AIRFLOW_WWW_USER_CREATE=true
-      - _AIRFLOW_WWW_USER_USERNAME=${AIRFLOW_USERNAME}
-      - _AIRFLOW_WWW_USER_PASSWORD=${AIRFLOW_PASSWORD}
-    command: bash -c "/opt/airflow/scripts/init_airflow_connections.sh && airflow version"
-    restart: on-failure
+      postgres-airflow:
+        condition: service_healthy
+      postgres-spotify:
+        condition: service_healthy
 
-  # Grafana for visualization
-  grafana:
-    image: grafana/grafana:10.1.0
-    container_name: spotify_grafana
-    depends_on:
-      - postgres
-    environment:
-      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER}
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
-      - GF_INSTALL_PLUGINS=${GRAFANA_PLUGINS}
-    ports:
-      - "${GRAFANA_PORT}:3000"
-    volumes:
-      - grafana_data:/var/lib/grafana
-      - ./grafana/provisioning:/etc/grafana/provisioning
-      - ./grafana/dashboards:/var/lib/grafana/dashboards
-    restart: always
-
+    command: bash -c "airflow db migrate && 
+            (airflow users list | grep -q ${AIRFLOW_USERNAME} || \
+            airflow users create \
+            --username ${AIRFLOW_USERNAME} \
+            --password ${AIRFLOW_PASSWORD} \
+            --firstname ${FIRST_NAME} \
+            --lastname ${LAST_NAME} 
+            --role Admin \
+            --email ${AIRFLOW_EMAIL}) && /opt/airflow/scripts/init_airflow_connections.sh"
+    restart: no
 
 volumes:
-  postgres_data:
-  grafana_data:
+  airflow_metadata:
+  spotify_data:

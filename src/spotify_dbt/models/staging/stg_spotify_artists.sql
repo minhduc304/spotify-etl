@@ -19,8 +19,8 @@ This model:
 
 with artists_source as (
     select 
-        album_id,
         artist_id,
+        name,
         popularity,
         followers,
         genres::json as genres_json,
@@ -63,8 +63,8 @@ genre_processing as (
 artist_genres as (
     select 
         artist_id,
-        array_agg(distinct genres) as genres,
-        array_length(array_agg(distinct genres)) as genre_count
+        array_agg(distinct genre) as genres,
+        array_length(array_agg(distinct genre), 1) as genre_count
     from genre_processing
     group by artist_id
 )

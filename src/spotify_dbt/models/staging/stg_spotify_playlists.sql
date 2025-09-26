@@ -28,7 +28,7 @@ with playlists_source as (
         snapshot_id,
         added_at
     from {{ source('spotify', 'playlists') }}
-)
+),
 
 playlist_tracks_source as (
     select 
@@ -38,7 +38,7 @@ playlist_tracks_source as (
         added_at,
         added_by
     from {{ source('spotify', 'playlist_tracks') }}
-)
+),
 
 tracks_source as (
     select 
@@ -58,13 +58,13 @@ playlist_metrics as (
     select 
         pt.playlist_id,
         count(distinct pt.track_id) as track_count,
-        sum(pt.duration_ms) as total_duration_ms,
+        sum(t.duration_ms) as total_duration_ms,
         -- Average track metrics
         avg(t.popularity) as avg_track_popularity,
         count(distinct t.primary_artist_id) as unique_artists_count,
         count(distinct t.album_id) as unique_albums_count,
         -- Explicit content metrics 
-        sum(case when t.explicit then 1 else 0) as explicit_tracks_count,
+        sum(case when t.explicit then 1 else 0 end) as explicit_tracks_count,
         -- When was playlist last updated
         max(pt.added_at) as last_updated_at
     from playlist_tracks_source pt
@@ -74,13 +74,13 @@ playlist_metrics as (
 
 select 
     p.playlist_id,
-    p.name as playlist_name,
+    p.playlist_name,
     p.description,
     p.owner_id,
     case 
-        when p.owner_id = 'spotify_official' then 'Spotify'
-        else user_created
-    end as playlist_type
+        when p.owner_id = 'spotify' then 'spotify_official'
+        else 'user_created'
+    end as playlist_type,
     p.is_public,
     p.is_collaborative,
     p.snapshot_id,
@@ -88,12 +88,12 @@ select
     -- Join with calculated metrics
     coalesce(pm.track_count, 0) as track_count,
     -- Format durations
-    coalesce(pm.duration_ms, 0) as total_duration_ms,
+    coalesce(pm.total_duration_ms, 0) as total_duration_ms,
     -- Convert to minutes
-    round((coalesce(pm.duration_ms, 0)/ 1000)/ 60, 2) as duration_minutes,
+    round((coalesce(pm.total_duration_ms, 0)/ 1000)/ 60, 2) as duration_minutes,
     -- Convert to hours:minutes
-    floor((coalesce(pm.duration_ms, 0)/ 1000/ 3600))::text || ':' || 
-        lpad((((coalesce(pm.duration_ms, 0)/ 1000) % 3600) / 60)::text, 2, '0') as duration_formatted,
+    floor((coalesce(pm.total_duration_ms, 0)/ 1000/ 3600))::text || ':' || 
+        lpad((((coalesce(pm.total_duration_ms, 0)/ 1000) % 3600) / 60)::text, 2, '0') as duration_formatted,
     coalesce(pm.avg_track_popularity, 0) as avg_track_popularity,
     coalesce(pm.unique_artists_count, 0) as unique_artists_count,
     coalesce(pm.unique_albums_count, 0) as unique_albums_count,

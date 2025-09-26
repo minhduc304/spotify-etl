@@ -29,14 +29,21 @@ with albums_source as (
     from {{ source('spotify', 'albums') }}    
 ), 
 
-album_artists_source (
+album_artists_source as (
+    select 
+        album_id,
+        artist_id
+    from {{ source('spotify', 'album_artists') }}    
+),
+
+artists_source as (
     select 
         artist_id,
-        name as artist_name,
+        name as artist_name
     from {{ source('spotify', 'artists') }}    
 ), 
 
-standardized_dates (
+standardized_dates as (
     select 
         album_id,
         name,
@@ -58,7 +65,7 @@ albums_with_artists as (
         a.album_id,
         a.name as album_name,
         a.album_type,
-        a.release_date,
+        a.release_date_standardized,
         a.release_date_precision,
         a.total_tracks,
         a.added_at,
@@ -66,12 +73,12 @@ albums_with_artists as (
         array_agg(distinct art.artist_name) as artist_names
     from standardized_dates a
     left join album_artists_source aa on a.album_id = aa.album_id
-    left join artists_source art aa.artist_id = art.artist_id
+    left join artists_source art on aa.artist_id = art.artist_id
     group by 
         a.album_id,
         a.name,
         a.album_type,
-        a.release_date,
+        a.release_date_standardized,
         a.release_date_precision,
         a.total_tracks,
         a.added_at
@@ -90,7 +97,7 @@ select
     -- Calculate album age in days
     case
         when release_date_standardized is not null
-        then extract(day from current_date - release_date_standardized)
+        then (current_date - release_date_standardized)
         else null
     end as days_since_release,
     -- Categorize album freshness

@@ -31,22 +31,34 @@ with listening_history_source as (
 tracks_source as (
     select 
         track_id,
-        name as track_name,
+        track_name,
         album_id,
         duration_ms,
         popularity,
         explicit,
-        primary_artist_id,
-        primary_artist_genre
+        primary_artist_id
     from {{ ref('stg_spotify_tracks') }}
 ),
 
 albums_source as (
     select 
         album_id,
-        name as album_name, 
+        album_name, 
         release_date
     from {{ ref('stg_spotify_albums') }}
+),
+
+-- Add time gaps for session identification
+listening_with_gaps as (
+    select 
+        id, 
+        track_id,
+        played_at,
+        ms_played,
+        context_type,
+        context_id,
+        lag(played_at) over (order by played_at) as prev_played_at
+    from listening_history_source
 ),
 
 -- Add session identification
@@ -62,13 +74,13 @@ listening_with_sessions as (
         -- Identify sessions based on time gaps 
         sum(
             case
-                when played_at - lag(played_at) over (order by played_at) > interval '30 minutes'
-                or lag(played_at) over (order by played_at) is null
+                when played_at - prev_played_at > interval '30 minutes'
+                or prev_played_at is null
                 then 1
                 else 0
-            end over (order by played_at) as session_id
-        )
-    from listening_history_source
+            end
+        ) over (order by played_at rows unbounded preceding) as session_id
+    from listening_with_gaps
 ),
 -- Process context_types
 listening_contexts as (
@@ -94,7 +106,6 @@ select
     t.album_id,
     a.album_name,
     t.primary_artist_id,
-    t.primary_artist_genre,
     lh.played_at,
     -- Extract time parts for time-of-day analysis
     extract(hour from lh.played_at) as hour_of_day,
@@ -117,7 +128,7 @@ select
     lh.ms_played,
     t.duration_ms,
     -- Calculate completion rate
-    round((lh.ms_played::float / t.duration_ms::float) * 100, 2) as completion_percentage,
+    round((lh.ms_played::numeric / t.duration_ms::numeric) * 100, 2) as completion_percentage,
     -- Flag for skipped tracks
     case 
         when lh.ms_played < t.duration_ms * 0.3 then true
@@ -133,6 +144,6 @@ select
     lh.session_id,
     -- Calculate position within the session
     row_number() over (partition by lh.session_id order by lh.played_at) as session_position
-from listening_history_source lh
+from listening_with_sessions lh
 join tracks_source t on lh.track_id = t.track_id
 left join albums_source a on t.album_id = a.album_id

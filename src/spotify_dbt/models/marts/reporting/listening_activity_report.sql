@@ -22,20 +22,16 @@ This model:
     )
 }}
 
-with week_listening_patterns as (
-    seelct 
-)
-
 with daily_listening as (
     select 
         date_trunc('day', played_at) as listening_date,
         day_type,
         count(*) as total_plays,
         count(distinct track_id) as unique_tracks,
-        count(primary_artist_id) as unique_artists,
+        count(distinct primary_artist_id) as unique_artists,
         sum(ms_played) / 3600000.0 as total_hours_played,
-        sum(case when is_completed then 1 else 0) as completed_plays,
-        sum(case when is_skipped then 1 else 0) as skipped_plays,
+        sum(case when is_completed = true then 1 else 0 end) as completed_plays,
+        sum(case when is_skipped = true then 1 else 0 end) as skipped_plays,
         round(avg(completion_percentage), 2) as avg_completetion_percentage
     from {{ ref('stg_spotify_user_listening_history') }}
     group by 1, 2
@@ -46,8 +42,9 @@ hourly_patterns as (
         date_trunc('day', played_at) as listening_date,
         hour_of_day,
         count(*) as plays_in_hour,
-        sum(ms_played) / 60000.0 as minutes_played,
+        sum(ms_played) / 60000.0 as minutes_played
     from {{ ref('stg_spotify_user_listening_history') }}
+    group by 1, 2
 ),
 
 peak_hours as (
@@ -55,7 +52,7 @@ peak_hours as (
         listening_date,
         hour_of_day,
         plays_in_hour,
-        minutes_played,
+        minutes_played
     from (
         select 
             listening_date,
@@ -91,9 +88,9 @@ track_first_played as (
 daily_discoveries as (
     select 
         date_trunc('day', h.played_at) as listening_date,
-        count(distinct case when date_trunct('day', h.played_at) = f.first_played_date then h.track_id else null end) as new_tracks_count,
+        count(distinct case when date_trunc('day', h.played_at) = f.first_played_date then h.track_id else null end) as new_tracks_count,
         count(distinct h.track_id) as total_tracks_played
-    from {{ ref('stg_spotify_user_listening_history') }}
+    from {{ ref('stg_spotify_user_listening_history') }} h
     join track_first_played f on h.track_id = f.track_id
     group by 1
 ),
@@ -102,7 +99,7 @@ daily_discoveries as (
 daily_trends as (
     select 
         current_day.listening_date,
-        current.day.total_hours_played,
+        current_day.total_hours_played,
         current_day.total_hours_played - prev_day.total_hours_played as daily_hours_change,
         case 
             when current_day.total_hours_played > prev_day.total_hours_played then 'up'
@@ -133,7 +130,7 @@ week_listening_patterns as (
 ),
 
 -- Listening consistency metrics
-consistency metrics as (
+consistency_metrics as (
     select 
         listening_date,
         -- Count distinct days listened in the past 7 days
@@ -161,15 +158,15 @@ select
     dl.total_hours_played,
     dl.completed_plays,
     dl.skipped_plays,
-    dl.avg_completion_percentage,
+    dl.avg_completetion_percentage,
     -- Listening quality
-    round(dl.completed_plays::float / nullif(dl.total_plays, 0) * 100, 2) as completion_rate,
+    round(dl.completed_plays::numeric / nullif(dl.total_plays, 0) * 100, 2) as completion_rate,
     -- Peak listening hour
-    ph.peak_hour,
+    ph.hour_of_day as peak_hour,
     ph.minutes_played as peak_hour_minutes,
     -- Discovery metrics
     dd.new_tracks_count,
-    round(dd.new_tracks_count::float / nullif(dd.total_tracks_played, 0) * 100, 2) as discovery_rate,
+    round(dd.new_tracks_count::numeric / nullif(dd.total_tracks_played, 0) * 100, 2) as discovery_rate,
     -- Trend indicators
     dt.daily_hours_change,
     dt.daily_trend,

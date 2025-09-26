@@ -79,7 +79,7 @@ playlist_track_features as (
         a.popularity as artist_popularity,
         alb.release_date,
         -- Calculate track age in days
-        extract(day from current_date - alb.release_date) as track_age_days,
+        (current_date - alb.release_date) as track_age_days,
         pt.added_at
     from playlist_tracks pt
     join tracks t on pt.track_id = t.track_id
@@ -93,25 +93,24 @@ playlist_diversity as (
         ptf.playlist_id,
         -- Artist diversity
         count(distinct ptf.primary_artist_id) as unique_artists_count,
-        count(distinct ptf.primary_artist_id)::float / count(*)::float as artist_diversity_ratio,
+        count(distinct ptf.primary_artist_id)::float / nullif(count(*), 0)::float as artist_diversity_ratio,
         -- Era diversity (decades)
-        count(distinct floor(extract(year from alb.release_date) / 10)) as decade_count,
-        array_agg(distinct floor(extract(year from alb.release_date) / 10)) as decades_present,
-        -- Genre diversity
-        count(distinct unnest(ptf.artist_genres)) as unique_genres_count,
+        count(distinct floor(extract(year from ptf.release_date) / 10)) as decade_count,
+        array_agg(distinct floor(extract(year from ptf.release_date) / 10)) as decades_present,
+        -- Genre diversity (simplified - count distinct genre arrays)
+        count(distinct ptf.artist_genres) as unique_genre_arrays,
         -- Popularity diversity - standard deviation of track popularity
         stddev(ptf.popularity) as popularity_std_dev,
         -- Age diversity - range between oldest and newest track
-        max(alb.release_date) - min(alb.release_date) as release_date_range_days,
+        max(ptf.release_date) - min(ptf.release_date) as release_date_range_days,
         -- Calculate % of tracks from each decade
-        sum(case when extract(year from alb.release_date) >= 2020 then 1 else 0 end)::float / count(*)::float as pct_2020s,
-        sum(case when extract(year from alb.release_date) between 2010 and 2019 then 1 else 0 end)::float / count(*)::float as pct_2010s,
-        sum(case when extract(year from alb.release_date) between 2000 and 2009 then 1 else 0 end)::float / count(*)::float as pct_2000s,
-        sum(case when extract(year from alb.release_date) between 1990 and 1999 then 1 else 0 end)::float / count(*)::float as pct_1990s,
-        sum(case when extract(year from alb.release_date) between 1980 and 1989 then 1 else 0 end)::float / count(*)::float as pct_1980s,
-        sum(case when extract(year from alb.release_date) < 1980 then 1 else 0 end)::float / count(*)::float as pct_pre_1980s
+        sum(case when extract(year from ptf.release_date) >= 2020 then 1 else 0 end)::float / nullif(count(*), 0)::float as pct_2020s,
+        sum(case when extract(year from ptf.release_date) between 2010 and 2019 then 1 else 0 end)::float / nullif(count(*), 0)::float as pct_2010s,
+        sum(case when extract(year from ptf.release_date) between 2000 and 2009 then 1 else 0 end)::float / nullif(count(*), 0)::float as pct_2000s,
+        sum(case when extract(year from ptf.release_date) between 1990 and 1999 then 1 else 0 end)::float / nullif(count(*), 0)::float as pct_1990s,
+        sum(case when extract(year from ptf.release_date) between 1980 and 1989 then 1 else 0 end)::float / nullif(count(*), 0)::float as pct_1980s,
+        sum(case when extract(year from ptf.release_date) < 1980 then 1 else 0 end)::float / nullif(count(*), 0)::float as pct_pre_1980s
     from playlist_track_features ptf
-    left join albums alb on ptf.track_id = tracks.album_id
     group by ptf.playlist_id
 ),
 
@@ -120,11 +119,11 @@ playlist_coherence as (
     select
         ptf.playlist_id,
         -- Artist coherence (lower score = more focus on specific artists)
-        1 - (count(distinct ptf.primary_artist_id)::float / count(*)::float) as artist_coherence_score,
-        -- Genre coherence
-        1 - (count(distinct unnest(ptf.artist_genres))::float / greatest(1, sum(array_length(ptf.artist_genres, 1)))::float) as genre_coherence_score,
+        1 - (count(distinct ptf.primary_artist_id)::float / nullif(count(*), 0)::float) as artist_coherence_score,
+        -- Genre coherence (simplified)
+        1 - (count(distinct ptf.artist_genres)::float / nullif(count(*), 0)::float) as genre_coherence_score,
         -- Era coherence (standard deviation of release years - lower is more coherent)
-        stddev(extract(year from alb.release_date)) as release_year_std_dev,
+        stddev(extract(year from ptf.release_date)) as release_year_std_dev,
         -- Popularity coherence (lower std dev = more coherent popularity level)
         case
             when stddev(ptf.popularity) <= 10 then 'very_high'
@@ -134,7 +133,6 @@ playlist_coherence as (
             else 'very_low'
         end as popularity_coherence
     from playlist_track_features ptf
-    left join albums alb on ptf.track_id = tracks.album_id
     group by ptf.playlist_id
 ),
 
@@ -172,18 +170,18 @@ recommendation_potential as (
         -- Count of tracks user has listened to from this playlist
         count(distinct uh.track_id) as tracks_in_listening_history,
         -- Percent of playlist already heard
-        count(distinct uh.track_id)::float / p.track_count::float as pct_playlist_heard,
+        count(distinct uh.track_id)::float / nullif(p.track_count, 0)::float as pct_playlist_heard,
         -- Average completion rate when user listened to these tracks
         avg(uh.completion_percentage) as avg_completion_rate,
         -- Skip rate for tracks from this playlist
-        sum(case when uh.is_skipped then 1 else 0 end)::float / count(distinct uh.track_id)::float as skip_rate,
+        sum(case when uh.is_skipped then 1 else 0 end)::float / nullif(count(distinct uh.track_id), 0)::float as skip_rate,
         -- Calculate recommendation score (higher = better recommendation)
         case
             -- If user has listened to >20% of playlist with good completion, high potential
-            when count(distinct uh.track_id)::float / p.track_count::float > 0.2 
+            when count(distinct uh.track_id)::float / nullif(p.track_count, 0)::float > 0.2 
                 and avg(uh.completion_percentage) > 80 then 'high'
             -- If user has listened to some tracks with decent completion, medium potential
-            when count(distinct uh.track_id)::float / p.track_count::float > 0.05 
+            when count(distinct uh.track_id)::float / nullif(p.track_count, 0)::float > 0.05 
                 and avg(uh.completion_percentage) > 60 then 'medium'
             -- If user has listened to very few tracks or skips often, low potential
             when count(distinct uh.track_id) > 0 then 'low'
@@ -214,7 +212,7 @@ select
     p.album_diversity_ratio,
     
     -- Enhanced diversity metrics
-    pd.unique_genres_count,
+    pd.unique_genre_arrays,
     pd.decade_count,
     pd.decades_present,
     pd.popularity_std_dev,
@@ -264,7 +262,7 @@ select
     
     -- Additional insights
     case
-        when p.track_count >= 100 and pd.decade_count >= 4 and pd.unique_genres_count >= 10 then 'eclectic_mix'
+        when p.track_count >= 100 and pd.decade_count >= 4 and pd.unique_genre_arrays >= 10 then 'eclectic_mix'
         when pc.artist_coherence_score > 0.8 then 'artist_focused'
         when pc.genre_coherence_score > 0.8 then 'genre_focused'
         when pd.pct_pre_1980s > 0.7 then 'nostalgic'

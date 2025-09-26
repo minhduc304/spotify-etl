@@ -28,7 +28,7 @@ with tracks_source as (
         track_number,
         is_local,
         uri,
-        time_signaturem,
+        time_signature,
         added_at
     from {{ source('spotify', 'tracks') }}
 ),
@@ -44,7 +44,7 @@ track_artists_source as (
 artists_source as (
     select 
         artist_id,
-        name as artist_id
+        name as artist_name
     from {{ source('spotify', 'artists') }}
 ),
 
@@ -54,7 +54,7 @@ albums_source as (
         name as album_name,
         release_date
     from {{ source('spotify', 'albums')}}
-)
+),
 
 -- Join track with primary artist information
 track_with_artist as (
@@ -72,20 +72,20 @@ track_with_artist as (
         t.track_number,
         t.is_local,
         t.uri,
-        t.time_signaturem,
+        t.time_signature,
         t.added_at,
         -- Get primary artist (position 0)
         min(case when ta.position = 0 then a.artist_id end) as primary_artist_id,
         min(case when ta.position = 0 then a.artist_name end) as primary_artist_name,
         -- Aggregate all artists
         array_agg(distinct a.artist_id) as artist_ids,
-        array_agg(distinct a.artist_name) as artist_names,
+        array_agg(distinct a.artist_name) as artist_names
     from tracks_source t
     left join track_artists_source ta on t.track_id = ta.track_id
     left join artists_source a on ta.artist_id = a.artist_id
     group by 
         t.track_id,
-        t.name
+        t.name,
         t.album_id,
         t.duration_ms,
         t.popularity,
@@ -106,14 +106,14 @@ select
     t.duration_ms,
     t.duration_seconds,
     t.duration_minutes,
-    t.duration_formatted
+    t.duration_formatted,
     t.popularity,
     -- Normalize popularity into tiers
     case 
-        when popularity >= 80 then 'very_high'
-        when popularity >= 60 then 'high'
-        when popularity >= 40 then 'medium'
-        when popularity >= 20 then 'low'
+        when t.popularity >= 80 then 'very_high'
+        when t.popularity >= 60 then 'high'
+        when t.popularity >= 40 then 'medium'
+        when t.popularity >= 20 then 'low'
         else 'very_low'
     end as popularity_tier,
     t.explicit,

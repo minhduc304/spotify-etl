@@ -178,3 +178,26 @@ cython_debug/
 
 # test files
 test.py
+
+# Logs
+/logs
+*.log
+
+# macOS
+.DS_Store
+
+# dbt
+src/spotify_dbt/target/
+src/spotify_dbt/dbt_packages/
+src/spotify_dbt/logs/
+
+# Spotify cache
+.cache
+
+# IDE
+.vscode/
+.idea/
+
+# Airflow
+airflow-webserver.pid
+airflow.db

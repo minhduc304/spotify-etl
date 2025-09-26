@@ -1,6 +1,6 @@
 -- macros/calculate_affinity_scores.sql
 {% macro calculate_affinity_scores(
-    table_name.
+    table_name,
     entity_id_column,
     timestamp_column,
     event_type_column=none,
@@ -50,6 +50,7 @@ Parameters:
     {%- endset -%}
 {%- else -%}
     {%- set event_weight_sql -%} 1.0 {%- endset -%}
+{%- endif -%}
 
 {# Build the raw affinity score calculations #}
 with raw_affinity as (
@@ -57,7 +58,7 @@ with raw_affinity as (
         {{entity_id_column}},
         sum({{ time_decay_sql }} *  {{ event_weight_sql }}) as raw_score,
         count(*) as interaction_count,
-        max({{ timestamp_column }}) as last_interaction,
+        max({{ timestamp_column }}) as last_interaction
     from {{ table_name }}
     where {{ entity_id_column }} is not null 
     group by {{ entity_id_column }}
@@ -69,7 +70,7 @@ stats as (
         max(raw_score) as max_score,
         min(raw_score) as min_score,
         avg(raw_score) as avg_score,
-        stdev(raw_score) as stdev_score,
+        stddev(raw_score) as stdev_score,
         percentile_cont(0.5) within group (order by raw_score) as median_score
     from raw_affinity
 ),
@@ -86,10 +87,10 @@ normalized_affinity as (
                     else {{ min_score }} + ((r.raw_score - s.min_score) / (s.max_score - s.min_score)) * ({{ max_score }} - {{ min_score }})
                 end 
             {# Z-score normalization #}
-            when '{{ normalization_method }}' = '{{ zscore }}' then 
+            when '{{ normalization_method }}' = 'zscore' then 
                 case 
                     when s.stdev_score = 0 then {{ min_score }}
-                    else greatest(least( {{ min_score }} + 5 + ((r.raw_score - s.avg_score) s.stdev_score) * 2, {{ max_score }}), {{ min_score }})
+                    else greatest(least( {{ min_score }} + 5 + ((r.raw_score - s.avg_score) / s.stdev_score) * 2, {{ max_score }}), {{ min_score }})
                 end 
             {# Percentile-based scoring #}
             when '{{ normalization_method }}' = 'percentile' then
@@ -105,7 +106,7 @@ select
     {{ entity_id_column }},
     raw_score,
     normalized_score,
-    intertaction_count,
+    interaction_count,
     last_interaction,
     current_timestamp as calculated_at
 from normalized_affinity

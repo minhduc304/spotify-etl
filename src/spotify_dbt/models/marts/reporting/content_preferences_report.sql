@@ -13,7 +13,6 @@ This model:
 
 Sources from: artist_and_genre_preferences, stg_spotify_user_listening_history
 */
-*/
 
 {{
     config(

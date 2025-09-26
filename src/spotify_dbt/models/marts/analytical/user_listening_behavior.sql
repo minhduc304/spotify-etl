@@ -15,8 +15,7 @@ This model:
     config(
         materialized='table',
         schema='analytics',
-        sort=date_day,
-        tags=['daily', playlist_insights]
+        tags=['daily', 'playlist_insights']
 
     )
 }}
@@ -27,30 +26,30 @@ with listening_history as (
 
 daily_aggregates as (
     select 
-        user_id,
+        session_id,
         date_trunc('day', played_at) as date_day,
         count(*) as tracks_played,
         count(distinct track_id) as unique_tracks,
-        count(distinct artist_id) as unique_artists,
+        count(distinct primary_artist_id) as unique_artists,
         min(played_at) as first_played,
         max(played_at) as last_played,
         extract(epoch from (max(played_at) - min(played_at)))/3600 as session_duration_hours
     from listening_history
-    group_by 1, 2
+    group by 1, 2
 ),
 
 hourly_distribution as (
     select 
-        user_id,
+        session_id,
         extract(hour from played_at) as hour_of_day,
-        count(*) as tracks_played,
+        count(*) as tracks_played
     from listening_history
     group by 1, 2
 ),
 
 final as (
     select 
-        d.user_id,
+        d.session_id,
         d.date_day,
         d.tracks_played,
         d.unique_tracks,

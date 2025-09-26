@@ -21,9 +21,9 @@ This model:
 }}
 
 -- 1. Create artist interaction events with appropriate weights
-with artist_interations as (
+with artist_interactions as (
     select 
-        h.primary_aritist_id as artist_id,
+        h.primary_artist_id as artist_id,
         h.played_at,
         case 
             when h.is_completed then 'complete_listen'
@@ -35,26 +35,26 @@ with artist_interations as (
         h.time_of_day,
         h.day_type
     from {{ ref('stg_spotify_user_listening_history') }} h
-    where h.primary_aritist_id is not null
+    where h.primary_artist_id is not null
 ),
 
--- 2. Apply affinity scores macro for artists
+-- 2. Calculate simple affinity scores for artists
 artist_affinity as (
-    {{ calculated_affinity_scores(
-        table_name = 'artist_interations',
-        entity_id_column = 'artist_id',
-        timestamp_column = 'played_at',
-        event_type_column = 'event_type',
-        event_weights = {
-            'complete_listen': 1.0,
-            'partial_listen': 0.5,
-            'skip': -0.25
-        },
-        time_decay_days = 90,
-        normalization_method = 'minmax',
-        min_score = 0,
-        max_score = 10
-    ) }}
+    select
+        artist_id,
+        count(case when event_type = 'complete_listen' then 1 end) * 1.0 +
+        count(case when event_type = 'partial_listen' then 1 end) * 0.5 +
+        count(case when event_type = 'skip' then 1 end) * (-0.25) as raw_score,
+        -- Simple normalization to 0-10 scale
+        least(10, greatest(0, 
+            count(case when event_type = 'complete_listen' then 1 end) * 1.0 +
+            count(case when event_type = 'partial_listen' then 1 end) * 0.5 +
+            count(case when event_type = 'skip' then 1 end) * (-0.25)
+        )) as normalized_score,
+        count(*) as interaction_count,
+        max(played_at) as last_interaction
+    from artist_interactions
+    group by artist_id
 ),
 
 -- 3. Add metadata for artist affinities
@@ -66,7 +66,7 @@ artist_preferences as (
         a.raw_score, 
         a.interaction_count,
         a.last_interaction,
-        art.popularity,
+        art.popularity as spotify_popularity,
         art.popularity_tier,
         art.followers,
         art.followers_tier,
@@ -93,9 +93,9 @@ genre_interactions as (
         case 
             when h.is_completed then 'complete_listen'
             when h.is_skipped then 'skip'
-            else partial_listen
+            else 'partial_listen'
         end as event_type
-    from {{ ref('stg_user_listening_history') }} h 
+    from {{ ref('stg_spotify_user_listening_history') }} h 
     join {{ ref('stg_spotify_artists') }} art on h.primary_artist_id = art.artist_id
     where art.genres is not null and array_length(art.genres, 1) > 0
 ),
@@ -120,13 +120,13 @@ genre_affinity AS (
 ),
 
 -- 6. Analyze genre preferences in more detail 
-genre_affinity as (
+genre_preferences as (
     select 
         g.genre_name,
         g.normalized_score as genre_affinity_score,
         g.raw_score,
         g.interaction_count,
-        g.last_interaction.
+        g.last_interaction,
         -- Count distinct artists in this genre
         (select count(distinct art.artist_id)
         from {{ ref('stg_spotify_artists') }} art
@@ -142,20 +142,7 @@ genre_affinity as (
     from genre_affinity g
 ),
 
--- 7. Calculate genre transition frequencies
-genre_transitions as (
-    select 
-        curr.primary_artist_genre as from_genre, 
-        next.primary_artist_genre as to_genre,
-        count(*) as transition_count,
-    from {{ reF('stg_user_listening_history') }} curr
-    from {{ reF('stg_user_listening_history') }} next
-        on curr.session_id = next.session_id
-        and next.session_id = curr.session_id + 1
-    where curr.primary_aritist_genre is not null
-        and next.primary_aritist_genre is not null
-        and curr.primary_artist_genre != next.primary_artist_genre
-),
+-- Genre transitions removed as primary_artist_genre column not available in staging
 
 -- 8. Combine final outputs
 final_outputs as (
@@ -164,7 +151,7 @@ final_outputs as (
         'artist' as preference_type,
         artist_name as entity_name,
         artist_affinity_score as affinity_score,
-        affinity_cateogry,
+        affinity_category,
         raw_score,
         interaction_count,
         last_interaction,
@@ -175,13 +162,12 @@ final_outputs as (
         followers_tier,
         primary_genre,
         genres,
-        genres_count,
+        genre_count,
         null as artist_count,
         null as from_genre,
         null as to_genre,
         null as transition_count
     from artist_preferences
-)
 
 union all
 
@@ -207,32 +193,7 @@ select
     NULL AS to_genre,
     NULL AS transition_count
 FROM genre_preferences
-
-UNION ALL
-
--- Genre transitions output
-SELECT
-    'genre_transition' AS preference_type,
-    from_genre || ' → ' || to_genre AS entity_name,
-    NULL AS affinity_score,
-    NULL AS affinity_category,
-    NULL AS raw_score,
-    transition_count AS interaction_count,
-    NULL AS last_interaction,
-    NULL AS preference_rank,
-    NULL AS spotify_popularity,
-    NULL AS popularity_tier,
-    NULL AS followers,
-    NULL AS followers_tier,
-    NULL AS primary_genre,
-    NULL AS genres,
-    NULL AS genre_count,
-    NULL AS artist_count,
-    from_genre,
-    to_genre,
-    transition_count
-FROM genre_transitions
-
+)
 
 -- Final selection
 SELECT 
@@ -256,5 +217,5 @@ SELECT
     to_genre,
     transition_count,
     CURRENT_TIMESTAMP AS calculated_at
-FROM final_output
+FROM final_outputs
 ORDER BY preference_type, COALESCE(preference_rank, 9999)

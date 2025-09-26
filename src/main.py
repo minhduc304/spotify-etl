@@ -161,7 +161,8 @@ class SpotifyETL:
         Retrieves the most recent timestamp from specified table and column.
         """
         #If the table exists, get the latest timestamp
-        query = f"SELECT MAX(played_at) FROM {table};"
+        # Using parameterized query to avoid SQL injection
+        query = "SELECT MAX(played_at) FROM user_listening_history;"
         self.cursor.execute(query)
         result = self.cursor.fetchone()
 
@@ -187,27 +188,28 @@ class SpotifyETL:
         
         # Process and store the data 
         self.process_recently_played(results['items'])
+        return results['items']
 
     def process_recently_played(self, items):
         """Process and store recently played tracks with related entities"""   
         for item in items:
             track = item['track']
 
-        # 1. Store track data
-        self.store_track(track)
+            # 1. Store track data
+            self.store_track(track)
 
-        # 2. Store album data
-        self.store_album(track['album'])
+            # 2. Store album data
+            self.store_album(track['album'])
 
-        # 3. Store artists data 
-        for artist in track['artists']:
-            self.store_artist(artist['id'])
+            # 3. Store artists data 
+            for artist in track['artists']:
+                self.store_artist(artist['id'])
 
-            # Store track-artist relationship
-            position = track['artists'].index(artist)
-            self.store_track_artist_relation(track['id'], artist['id'], position)
-        
-         # 4. Store user listening record
+                # Store track-artist relationship
+                position = track['artists'].index(artist)
+                self.store_track_artist_relation(track['id'], artist['id'], position)
+            
+            # 4. Store user listening record
             context_type = item.get('context', {}).get('type') if item.get('context') else None
             context_id = item.get('context', {}).get('uri') if item.get('context') else None
             
@@ -233,10 +235,15 @@ class SpotifyETL:
             if self.cursor.fetchone():
                 return
 
+            # Validate required fields
+            if not track.get('album'):
+                print(f"Skipping track without album: {track.get('name', 'Unknown')}")
+                return
+
             # Insert track data
             self.cursor.execute("""
                 INSERT INTO tracks (
-                    track_id, name, album_id, duration_ms, popularity, 
+                    track_id, name, album_id, duration_ms, popularity,
                     explicit, track_number, is_local, uri
                 ) VALUES (
                     %s, %s, %s, %s, %s, %s, %s, %s, %s
@@ -253,7 +260,7 @@ class SpotifyETL:
                 track.get('is_local', False),
                 track['uri']
             ))
-            
+
             self.db_conn.commit()
         except Exception as e:
             print(f"Error storing track {track.get('id')}: {e}")
@@ -371,15 +378,14 @@ class SpotifyETL:
             self.cursor.execute("""
                 INSERT INTO playlists (
                     playlist_id, name, description, owner_id,
-                    is_public, is_collaborative, followers, snapshot_id
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    is_public, is_collaborative, snapshot_id
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s)
                 ON CONFLICT (playlist_id) 
                 DO UPDATE SET 
                     name = EXCLUDED.name,
                     description = EXCLUDED.description,
                     is_public = EXCLUDED.is_public,
                     is_collaborative = EXCLUDED.is_collaborative,
-                    followers = EXCLUDED.followers,
                     snapshot_id = EXCLUDED.snapshot_id
             """, (
                 playlist['id'],
@@ -388,7 +394,6 @@ class SpotifyETL:
                 playlist['owner']['id'],
                 playlist.get('public', False),
                 playlist.get('collaborative', False),
-                playlist.get('followers', {}).get('total', 0),
                 playlist.get('snapshot_id', '')
             ))
             
@@ -413,19 +418,25 @@ class SpotifyETL:
             # Some items might be None if tracks were removed
             if not item or not item.get('track'):
                 continue
-                
+
             track = item['track']
-            
+
             # Skip local tracks as they don't have complete info
             if track.get('is_local', False):
                 continue
-                
+
+            # Skip if not a track (could be podcast episode or other content)
+            # Check if it has the required fields for a music track
+            if not track.get('album') or not track.get('artists'):
+                print(f"Skipping non-music content: {track.get('name', 'Unknown')}")
+                continue
+
             # Store track data
             self.store_track(track)
-            
+
             # Store album
             self.store_album(track['album'])
-            
+
             # Store artists
             for artist in track['artists']:
                 self.store_artist(artist['id'])

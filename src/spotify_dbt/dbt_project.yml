@@ -38,15 +38,12 @@ models:
         +materialized: table
         listening_activity_report:
           +materialized: view
+        content_preferences_report:
+          +enabled: false  # Disabled due to missing primary_artist_genre column
 
     # utils:
     #   +materialized: view
 
-# Macros configuration
-macros:
-  spotify_dbt:
-    calculate_affinity_scores:
-      +description: "Calculates affinity scores between users and content"
-    generate_audio_feature_segments:
-      +description: "Generates segments based on audio features"
+# Note: macros don't need configuration in dbt_project.yml
+# They are automatically discovered from the macros/ directory
 

@@ -1,17 +1,22 @@
 # Spotify API credentials
 SPOTIFY_CLIENT_ID=your_spotify_client_id
 SPOTIFY_CLIENT_SECRET=your_spotify_client_secret
-SPOTIFY_REDIRECT_URI=http://localhost:8080/callback
-SPOTIFY_SCOPE=user-read-playback-state,user-read-currently-playing,user-read-recently-played,user-top-read,user-read-playback-position # for this particular project
+SPOTIFY_REDIRECT_URI=http://localhost:8888/callback
+SPOTIFY_SCOPE=user-read-recently-played user-top-read playlist-read-private
 
-# PostgreSQL DB configuration
-POSTGRES_HOST=your_host
-POSTGRES_USER=your_postgres_user
+# PostgreSQL DB configuration (Airflow metadata)
+POSTGRES_HOST=postgres
+POSTGRES_USER=admin
 POSTGRES_PASSWORD=your_secure_postgres_password
-POSTGRES_DB=your_postgres_db
+POSTGRES_DB=airflow
 POSTGRES_PORT=5432
-# AIRFLOW_CONN_POSTGRES_SPOTIFY="conn_type://your_postgres_user:your_secure_postgres_password@container_host:port/your_postgres_db"  
-# More detailed documentation on how to generate your connection uri here: (https://airflow.apache.org/docs/apache-airflow/stable/howto/connection.html#connection-uri-format).
+
+# Spotify database configuration (Analytics data)
+SPOTIFY_DB=spotify
+SPOTIFY_DB_HOST=postgres
+SPOTIFY_DB_PORT=5432
+SPOTIFY_DB_USER=analyst
+SPOTIFY_DB_PASSWORD=analyst_password
 
 # Redis configuration
 REDIS_PORT=6379
@@ -20,15 +25,13 @@ REDIS_PORT=6379
 AIRFLOW_WEBSERVER_PORT=8080
 AIRFLOW_USERNAME=airflow
 AIRFLOW_PASSWORD=your_secure_airflow_password
+FIRST_NAME=firstname
+LAST_NAME=lastname
+AIRFLOW_EMAIL=airflow@example.com
 AIRFLOW_FERNET_KEY='' # Generate with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 AIRFLOW_DAGS_PAUSED_AT_CREATION=true
 AIRFLOW_LOAD_EXAMPLES=false
 
-# Grafana configuration
-GRAFANA_PORT=3000
-GRAFANA_ADMIN_USER=admin
-GRAFANA_ADMIN_PASSWORD=your_secure_grafana_password
-GRAFANA_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource
 
 # Miscellaneous
 LOGS_PATH=/your/path/to/logs #used for dags that clean up logs
